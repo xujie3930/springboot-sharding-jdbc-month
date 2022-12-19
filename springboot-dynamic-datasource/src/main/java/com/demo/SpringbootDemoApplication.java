@@ -5,10 +5,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 //@SpringBootApplication(exclude = DruidDataSourceAutoConfigure.class)
-public class SpringbootMybatisApplication {
+public class SpringbootDemoApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(SpringbootMybatisApplication.class, args);
+        SpringApplication.run(SpringbootDemoApplication.class, args);
     }
 
 }
