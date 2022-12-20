@@ -46,7 +46,7 @@ public class MyDBRangeShardingAlgorithm implements RangeShardingAlgorithm<Intege
             upper = getUpperEndpoint(databaseNames);
         }
 
-        // 循环范围计算分库逻辑
+        // 循环计算分库范围
         for (int i = lower; i <= upper; i++) {
             for (String databaseName : databaseNames) {
                 String value = String.valueOf(i);
