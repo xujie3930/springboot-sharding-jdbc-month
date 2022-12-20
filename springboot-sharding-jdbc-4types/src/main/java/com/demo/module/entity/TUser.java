@@ -25,10 +25,11 @@ public class TUser implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    public TUser(String username, String password, Integer age) {
+    public TUser(String username, String password, Integer age, Integer salary) {
         this.username = username;
         this.password = password;
         this.age = age;
+        this.salary = salary;
     }
 
     /**
@@ -51,6 +52,11 @@ public class TUser implements Serializable {
      * 年龄
      */
     private Integer age;
+
+    /**
+     * 工资
+     */
+    private Integer salary;
 
     /**
      * 创建时间

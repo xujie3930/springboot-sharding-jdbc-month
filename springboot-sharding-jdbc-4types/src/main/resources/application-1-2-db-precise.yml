@@ -1,0 +1,79 @@
+server:
+  port: 8081
+
+spring:
+  shardingsphere:
+    # 打印sql
+    props:
+      sql:
+        show: true
+    datasource:
+      names: mydb-1,mydb-2
+      mydb-1:
+        type: com.alibaba.druid.pool.DruidDataSource
+        url: jdbc:mysql://localhost:3306/mydb-1?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        username: root
+        password: root
+        # 数据源其他配置
+        initialSize: 5
+        minIdle: 5
+        maxActive: 20
+        maxWait: 60000
+        timeBetweenEvictionRunsMillis: 60000
+        minEvictableIdleTimeMillis: 300000
+        validationQuery: SELECT 1 FROM DUAL
+        testWhileIdle: true
+        testOnBorrow: false
+        testOnReturn: false
+        poolPreparedStatements: true
+        # 配置监控统计拦截的filters，去掉后监控界面sql无法统计，'wall'用于防火墙
+        #filters: stat,wall,log4j
+        maxPoolPreparedStatementPerConnectionSize: 20
+        useGlobalDataSourceStat: true
+        connectionProperties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=500
+      mydb-2:
+        type: com.alibaba.druid.pool.DruidDataSource
+        url: jdbc:mysql://localhost:3306/mydb-2?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        username: root
+        password: root
+        # 数据源其他配置
+        initialSize: 5
+        minIdle: 5
+        maxActive: 20
+        maxWait: 60000
+        timeBetweenEvictionRunsMillis: 60000
+        minEvictableIdleTimeMillis: 300000
+        validationQuery: SELECT 1 FROM DUAL
+        testWhileIdle: true
+        testOnBorrow: false
+        testOnReturn: false
+        poolPreparedStatements: true
+        # 配置监控统计拦截的filters，去掉后监控界面sql无法统计，'wall'用于防火墙
+        #filters: stat,wall,log4j
+        maxPoolPreparedStatementPerConnectionSize: 20
+        useGlobalDataSourceStat: true
+        connectionProperties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=500
+    sharding:
+      # 表策略配置
+      tables:
+        # t_user 是逻辑表
+        t_user:
+          # #### 精准分库-开始 ####
+          databaseStrategy:
+            standard:
+              # 分片键
+              shardingColumn: age
+              # 精准分库算法
+              preciseAlgorithmClassName: com.demo.module.config.MyDBPreciseShardingAlgorithm
+          # #### 精准分库-结束 ####
+
+# mybatis-plus
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/*Mapper.xml
+  # 实体扫描，多个package用逗号或者分号分隔
+  typeAliasesPackage: cn.agile.stats.*.entity
+  # 测试环境打印sql
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
