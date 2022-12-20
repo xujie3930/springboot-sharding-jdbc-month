@@ -19,7 +19,7 @@ import java.util.Set;
 public class MyDBRangeShardingAlgorithm implements RangeShardingAlgorithm<Integer> {
 
     /**
-     * 数据库分片符号
+     * 数据库分片符号，例：mydb-1 中，分片符号为 "-"
      */
     private final String DATABASE_SPLIT_SYMBOL = "-";
 
