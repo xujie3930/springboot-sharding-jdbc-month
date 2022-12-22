@@ -60,44 +60,16 @@ spring:
       tables:
         # t_user 是逻辑表
         t_user:
-          # #### Hint分表-开始 ####
-          tableStrategy:
-            hint:
-              # 复合分库算法
-              algorithmClassName: com.demo.module.config.MyTableHintShardingAlgorithm
-          # #### Hint分表-结束 ####
-
-#          # #### 复合分库-开始 ####
-#          databaseStrategy:
-#            complex:
-#              # 分片键
-#              shardingColumns: age,salary
-#              # 复合分库算法
-#              algorithmClassName: com.demo.module.config.MyDBComplexKeysShardingAlgorithm
-#          # #### 复合分库-结束 ####
-
-#          # #### 范围分库-开始 ####
-#          databaseStrategy:
-#            standard:
-#              # 分片键
-#              shardingColumn: age
-#              # 精准分库算法
-#              preciseAlgorithmClassName: com.demo.module.config.MyDBPreciseShardingAlgorithm
-#              # 范围分库算法
-#              rangeAlgorithmClassName: com.demo.module.config.MyDBRangeShardingAlgorithm
-#          # #### 范围分库-结束 ####
-
-#          # #### 精准分表-开始 ####
-#          # 分表节点 可以理解为分表后的那些表 比如 t_user_1 ,t_user_2
-#          actualDataNodes: mydb-1.t_user_$->{1..2}
-#          tableStrategy:
-#            standard:
-#              # 分片键
-#              shardingColumn: age
-#              # 精准分表算法
-#              preciseAlgorithmClassName: com.demo.module.config.MyTablePreciseShardingAlgorithm
-#          # #### 精准分表-结束 ####
-
+          # #### 范围分库-开始 ####
+          databaseStrategy:
+            standard:
+              # 分片键
+              shardingColumn: age
+              # 精准分库算法
+              preciseAlgorithmClassName: com.demo.module.config.MyDBPreciseShardingAlgorithm
+              # 范围分库算法
+              rangeAlgorithmClassName: com.demo.module.config.MyDBRangeShardingAlgorithm
+          # #### 范围分库-结束 ####
 
 # mybatis-plus
 mybatis-plus:

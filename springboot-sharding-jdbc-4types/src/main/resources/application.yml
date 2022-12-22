@@ -3,4 +3,4 @@ server:
 
 spring:
   profiles:
-    active: 4-hint
+    active: standard-precise-table
