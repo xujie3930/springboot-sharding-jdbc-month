@@ -2,6 +2,9 @@ server:
   port: 8081
 
 spring:
+  ### 处理连接池冲突 #####
+  main:
+    allow-bean-definition-overriding: true
   shardingsphere:
     # 打印sql
 #    props:

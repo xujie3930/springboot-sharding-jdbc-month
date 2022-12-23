@@ -41,4 +41,11 @@ class SpringbootDemoApplicationTests {
         users.forEach(System.out::println);
     }
 
+    @Test
+    void findByIdTest() {
+        TUser user = userService.getById(1606125633996324865L);
+        System.out.println(">>>>>>>>>> 【Result】<<<<<<<<<< ");
+        System.out.println(user);
+    }
+
 }

@@ -3,8 +3,14 @@ package com.demo.module.config.sharding;
 import com.alibaba.druid.util.StringUtils;
 import com.demo.module.utils.SpringUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.shardingsphere.core.rule.DataNode;
+import org.apache.shardingsphere.core.rule.TableRule;
+import org.apache.shardingsphere.shardingjdbc.jdbc.core.datasource.ShardingDataSource;
 import org.springframework.core.env.Environment;
 
+import javax.sql.DataSource;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.sql.*;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -21,17 +27,20 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ShardingAlgorithmTool {
 
-    /** 已存在表名集合缓存 */
-    private static final Set<String> tableNameCache = new HashSet<>();
-    /** 用户表名 */
-    private static final String userTableName = "t_user";
+    /** 逻辑表名，例：t_user */
+    private static final String LOGIC_TABLE_NAME = "t_user";
     /** 表分片符号，例：t_user_202201 中，分片符号为 "_" */
-    private static final String tableSplitSymbol = "_";
+    private static final String TABLE_SPLIT_SYMBOL = "_";
+
+    /** 已存在表名集合缓存 */
+    private static final Set<String> TABLE_NAME_CACHE = new HashSet<>();
+
     /** 数据库配置 */
-    private static final Environment env = SpringUtil.getApplicationContext().getEnvironment();
-    private static final String url = env.getProperty("spring.shardingsphere.datasource.mydb.url");
-    private static final String username = env.getProperty("spring.shardingsphere.datasource.mydb.username");
-    private static final String password = env.getProperty("spring.shardingsphere.datasource.mydb.password");
+    private static final Environment ENV = SpringUtil.getApplicationContext().getEnvironment();
+    private static final String DATASOURCE_URL = ENV.getProperty("spring.shardingsphere.datasource.mydb.url");
+    private static final String DATASOURCE_USERNAME = ENV.getProperty("spring.shardingsphere.datasource.mydb.username");
+    private static final String DATASOURCE_PASSWORD = ENV.getProperty("spring.shardingsphere.datasource.mydb.password");
+
 
     /**
      * 检查分表获取的表名是否存在，不存在则自动建表
@@ -51,7 +60,7 @@ public class ShardingAlgorithmTool {
      */
     public static String getShardingTableAndCreate(String logicTableName, String resultTableName) {
         // 缓存中有此表则返回，没有则判断创建
-        if (tableNameCache.contains(resultTableName)) {
+        if (TABLE_NAME_CACHE.contains(resultTableName)) {
             return resultTableName;
         } else {
             // 未创建的表返回逻辑空表
@@ -67,9 +76,11 @@ public class ShardingAlgorithmTool {
         // 读取数据库中|所有表名
         List<String> tableNameList = getAllTableNameBySchema();
         // 删除旧的缓存（如果存在）
-        tableNameCache.clear();
+        TABLE_NAME_CACHE.clear();
         // 写入新的缓存
-        ShardingAlgorithmTool.tableNameCache.addAll(tableNameList);
+        TABLE_NAME_CACHE.addAll(tableNameList);
+        // 动态更新配置 actualDataNodes
+        actualDataNodesRefresh();
     }
 
     /**
@@ -78,11 +89,11 @@ public class ShardingAlgorithmTool {
      */
     public static List<String> getAllTableNameBySchema() {
         List<String> tableNames = new ArrayList<>();
-        if (StringUtils.isEmpty(url) || StringUtils.isEmpty(username) || StringUtils.isEmpty(password)) {
-            log.error(">>>>>>>>>> 【ERROR】数据库连接配置有误，请稍后重试，url:{}, username:{}, password:{}", url, username, password);
+        if (StringUtils.isEmpty(DATASOURCE_URL) || StringUtils.isEmpty(DATASOURCE_USERNAME) || StringUtils.isEmpty(DATASOURCE_PASSWORD)) {
+            log.error(">>>>>>>>>> 【ERROR】数据库连接配置有误，请稍后重试，URL:{}, username:{}, password:{}", DATASOURCE_URL, DATASOURCE_USERNAME, DATASOURCE_PASSWORD);
             throw new IllegalArgumentException("数据库连接配置有误，请稍后重试");
         }
-        try (Connection conn = DriverManager.getConnection(url, username, password);
+        try (Connection conn = DriverManager.getConnection(DATASOURCE_URL, DATASOURCE_USERNAME, DATASOURCE_PASSWORD);
              Statement st = conn.createStatement()) {
             try (ResultSet rs = st.executeQuery("show TABLES like 't_user_%'")) {
                 while (rs.next()) {
@@ -101,7 +112,32 @@ public class ShardingAlgorithmTool {
      * @return 表名缓存
      */
     public static Set<String> getTableNameCache() {
-        return tableNameCache;
+        return TABLE_NAME_CACHE;
+    }
+
+    /**
+     *  动态更新配置 actualDataNodes
+     */
+    public static void actualDataNodesRefresh()  {
+        try {
+            // 获取数据分片节点
+            Set<String> tableNameCache = ShardingAlgorithmTool.getTableNameCache();
+            ShardingDataSource dataSource = (ShardingDataSource) SpringUtil.getBean("dataSource", DataSource.class);
+            TableRule tableRule = dataSource.getShardingContext().getShardingRule().getTableRule(LOGIC_TABLE_NAME);
+            List<DataNode> dataNodes = tableRule.getActualDataNodes();
+            String dataSourceName = dataNodes.get(0).getDataSourceName();
+            List<DataNode> newDataNodes = tableNameCache.stream().map(tableName -> new DataNode(dataSourceName + "." + tableName)).collect(Collectors.toList());
+
+            // 更新actualDataNodes
+            Field actualDataNodesField = TableRule.class.getDeclaredField("actualDataNodes");
+            Field modifiersField = Field.class.getDeclaredField("modifiers");
+            modifiersField.setAccessible(true);
+            modifiersField.setInt(actualDataNodesField, actualDataNodesField.getModifiers() & ~Modifier.FINAL);
+            actualDataNodesField.setAccessible(true);
+            actualDataNodesField.set(tableRule, newDataNodes);
+        }catch (Exception e){
+            log.error("初始化 动态表单失败，原因：{}", e.getMessage(), e);
+        }
     }
 
 
@@ -117,8 +153,8 @@ public class ShardingAlgorithmTool {
      * @return 创建结果（true创建成功，false未创建）
      */
     private static boolean createShardingTable(String logicTableName, String resultTableName) {
-        // 根据日期判断，当前月份之后月份分表不提前创建
-        String month = resultTableName.replace(logicTableName + tableSplitSymbol,"");
+        // 根据日期判断，当前月份之后分表不提前创建
+        String month = resultTableName.replace(logicTableName + TABLE_SPLIT_SYMBOL,"");
         YearMonth shardingMonth = YearMonth.parse(month, DateTimeFormatter.ofPattern("yyyyMM"));
         if (shardingMonth.isAfter(YearMonth.now())) {
             return false;
@@ -126,7 +162,7 @@ public class ShardingAlgorithmTool {
 
         synchronized (logicTableName.intern()) {
             // 缓存中有此表 返回
-            if (tableNameCache.contains(resultTableName)) {
+            if (TABLE_NAME_CACHE.contains(resultTableName)) {
                 return false;
             }
             // 缓存中无此表，则建表并添加缓存
@@ -135,7 +171,8 @@ public class ShardingAlgorithmTool {
                 sqlList.set(i, sqlList.get(i).replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS").replace(logicTableName, resultTableName));
             }
             executeSql(sqlList);
-            tableNameCache.add(resultTableName);
+            // 缓存重载
+            tableNameCacheReload();
         }
         return true;
     }
@@ -145,11 +182,11 @@ public class ShardingAlgorithmTool {
      * @param sqlList SQL集合
      */
     private static void executeSql(List<String> sqlList) {
-        if (StringUtils.isEmpty(url) || StringUtils.isEmpty(username) || StringUtils.isEmpty(password)) {
-            log.error(">>>>>>>>>> 【ERROR】数据库连接配置有误，请稍后重试，url:{}, username:{}, password:{}", url, username, password);
+        if (StringUtils.isEmpty(DATASOURCE_URL) || StringUtils.isEmpty(DATASOURCE_USERNAME) || StringUtils.isEmpty(DATASOURCE_PASSWORD)) {
+            log.error(">>>>>>>>>> 【ERROR】数据库连接配置有误，请稍后重试，URL:{}, username:{}, password:{}", DATASOURCE_URL, DATASOURCE_USERNAME, DATASOURCE_PASSWORD);
             throw new IllegalArgumentException("数据库连接配置有误，请稍后重试");
         }
-        try (Connection conn = DriverManager.getConnection(url, username, password)) {
+        try (Connection conn = DriverManager.getConnection(DATASOURCE_URL, DATASOURCE_USERNAME, DATASOURCE_PASSWORD)) {
             try (Statement st = conn.createStatement()) {
                 conn.setAutoCommit(false);
                 for (String sql : sqlList) {
@@ -173,7 +210,7 @@ public class ShardingAlgorithmTool {
      */
     private static List<String> getCreateTableSql(String tableName) {
         List<String> sqlList = new ArrayList<>();
-        if (tableName.equals(userTableName)) {
+        if (tableName.equals(LOGIC_TABLE_NAME)) {
             // 表结构
             sqlList.add("CREATE TABLE `t_user` (\n" +
                     "  `id` bigint(16) NOT NULL COMMENT '主键',\n" +
