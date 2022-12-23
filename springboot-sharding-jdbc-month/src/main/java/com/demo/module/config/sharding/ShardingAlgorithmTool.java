@@ -166,7 +166,7 @@ public class ShardingAlgorithmTool {
                 return false;
             }
             // 缓存中无此表，则建表并添加缓存
-            executeSql(Collections.singletonList("CREATE TABLE `" + resultTableName + "` LIKE `" + logicTableName + "`;"));
+            executeSql(Collections.singletonList("CREATE TABLE IF NOT EXISTS `" + resultTableName + "` LIKE `" + logicTableName + "`;"));
             // 缓存重载
             tableNameCacheReload();
         }
