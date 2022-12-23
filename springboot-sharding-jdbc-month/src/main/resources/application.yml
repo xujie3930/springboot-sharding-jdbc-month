@@ -35,29 +35,29 @@ spring:
         maxPoolPreparedStatementPerConnectionSize: 20
         useGlobalDataSourceStat: true
         connectionProperties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=500
-    sharding:
-      # 表策略配置
-      tables:
-        # t_user 是逻辑表
-        t_user:
-          # 配置数据节点，这里是按月分表
-          # 示例1：时间范围设置在202201 ~ 210012
-          # actualDataNodes: mydb.t_user_$->{2022..2100}0$->{1..9},mydb.t_user_$->{2022..2100}1$->{0..2}
-          # 示例2：时间范围设置在202201 ~ 202203
-          actualDataNodes: mydb.t_user_20220$->{1..3}
-          tableStrategy:
-            # 使用标准分片策略
-            standard:
-              # 配置分片字段
-              shardingColumn: create_time
-              # 配置精准分片算法
-              preciseAlgorithmClassName: com.demo.module.config.sharding.TimeShardingAlgorithm
-              # 配置范围分片算法
-              rangeAlgorithmClassName: com.demo.module.config.sharding.TimeShardingAlgorithm
-          # 配置主键及生成算法
-          keyGenerator:
-            column: id
-            type: SNOWFLAKE
+      sharding:
+        # 表策略配置
+        tables:
+          # t_user 是逻辑表
+          t_user:
+            # 配置数据节点，这里是按月分表
+            # 示例1：时间范围设置在202201 ~ 210012
+            # actualDataNodes: mydb.t_user_$->{2022..2100}0$->{1..9},mydb.t_user_$->{2022..2100}1$->{0..2}
+            # 示例2：时间范围设置在202201 ~ 202203
+            actualDataNodes: mydb.t_user
+            tableStrategy:
+              # 使用标准分片策略
+              standard:
+                # 配置分片字段
+                shardingColumn: create_time
+                # 配置精准分片算法
+                preciseAlgorithmClassName: com.demo.module.config.sharding.TimeShardingAlgorithm
+                # 配置范围分片算法
+                rangeAlgorithmClassName: com.demo.module.config.sharding.TimeShardingAlgorithm
+            # 配置主键及生成算法
+            keyGenerator:
+              column: id
+              type: SNOWFLAKE
 
 # mybatis-plus
 mybatis-plus:

@@ -166,9 +166,9 @@ public class ShardingAlgorithmTool {
                 return false;
             }
             // 缓存中无此表，则建表并添加缓存
-            List<String> sqlList = getCreateTableSql(logicTableName);
+            List<String> sqlList = getCreateTableSql(logicTableName, resultTableName);
             for (int i = 0; i < sqlList.size(); i++) {
-                sqlList.set(i, sqlList.get(i).replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS").replace(logicTableName, resultTableName));
+                sqlList.set(i, sqlList.get(i).replace(logicTableName, resultTableName));
             }
             executeSql(sqlList);
             // 缓存重载
@@ -205,24 +205,15 @@ public class ShardingAlgorithmTool {
 
     /**
      * 获取建表语句
-     * @param tableName 表名，例：t_user
+     *
+     * @param logicTableName 逻辑表名，例：t_user
+     * @param resultTableName 实际表名，例：t_user_202201
      * @return 建表语句集合
      */
-    private static List<String> getCreateTableSql(String tableName) {
+    private static List<String> getCreateTableSql(String logicTableName, String resultTableName) {
         List<String> sqlList = new ArrayList<>();
-        if (tableName.equals(LOGIC_TABLE_NAME)) {
-            // 表结构
-            sqlList.add("CREATE TABLE `t_user` (\n" +
-                    "  `id` bigint(16) NOT NULL COMMENT '主键',\n" +
-                    "  `username` varchar(64) NOT NULL COMMENT '用户名',\n" +
-                    "  `password` varchar(64) NOT NULL COMMENT '密码',\n" +
-                    "  `age` int(8) NOT NULL COMMENT '年龄',\n" +
-                    "  `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',\n" +
-                    "  `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',\n" +
-                    "  PRIMARY KEY (`id`)\n" +
-                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='用户表202203';");
-            // 表索引
-            sqlList.add("ALTER TABLE `t_user` ADD INDEX IDX_USERNAME ( `username` ) USING BTREE");
+        if (logicTableName.equals(LOGIC_TABLE_NAME)) {
+            sqlList.add("CREATE TABLE `" + resultTableName + "` LIKE `" + logicTableName + "`;");
         }
         return sqlList;
     }
