@@ -166,11 +166,7 @@ public class ShardingAlgorithmTool {
                 return false;
             }
             // 缓存中无此表，则建表并添加缓存
-            List<String> sqlList = getCreateTableSql(logicTableName, resultTableName);
-            for (int i = 0; i < sqlList.size(); i++) {
-                sqlList.set(i, sqlList.get(i).replace(logicTableName, resultTableName));
-            }
-            executeSql(sqlList);
+            executeSql(Collections.singletonList("CREATE TABLE `" + resultTableName + "` LIKE `" + logicTableName + "`;"));
             // 缓存重载
             tableNameCacheReload();
         }
@@ -201,21 +197,6 @@ public class ShardingAlgorithmTool {
             log.error(">>>>>>>>>> 【ERROR】数据库连接失败，请稍后重试，原因：{}", e.getMessage(), e);
             throw new IllegalArgumentException("数据库连接失败，请稍后重试");
         }
-    }
-
-    /**
-     * 获取建表语句
-     *
-     * @param logicTableName 逻辑表名，例：t_user
-     * @param resultTableName 实际表名，例：t_user_202201
-     * @return 建表语句集合
-     */
-    private static List<String> getCreateTableSql(String logicTableName, String resultTableName) {
-        List<String> sqlList = new ArrayList<>();
-        if (logicTableName.equals(LOGIC_TABLE_NAME)) {
-            sqlList.add("CREATE TABLE `" + resultTableName + "` LIKE `" + logicTableName + "`;");
-        }
-        return sqlList;
     }
 
 }
