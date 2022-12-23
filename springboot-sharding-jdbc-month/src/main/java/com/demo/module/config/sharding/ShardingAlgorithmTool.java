@@ -93,7 +93,7 @@ public class ShardingAlgorithmTool {
         }
         try (Connection conn = DriverManager.getConnection(DATASOURCE_URL, DATASOURCE_USERNAME, DATASOURCE_PASSWORD);
              Statement st = conn.createStatement()) {
-            try (ResultSet rs = st.executeQuery("show TABLES like 't_user_%'")) {
+            try (ResultSet rs = st.executeQuery("show TABLES like '" + LOGIC_TABLE_NAME + TABLE_SPLIT_SYMBOL + "%'")) {
                 while (rs.next()) {
                     tableNames.add(rs.getString(1));
                 }
