@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 public class ShardingAlgorithmTool {
 
     /** 逻辑表名，例：t_user */
-    private static final String LOGIC_TABLE_NAME = "t_user";
+    public static final String LOGIC_TABLE_NAME = "t_user";
     /** 表分片符号，例：t_user_202201 中，分片符号为 "_" */
     private static final String TABLE_SPLIT_SYMBOL = "_";
 
@@ -79,8 +79,6 @@ public class ShardingAlgorithmTool {
         TABLE_NAME_CACHE.clear();
         // 写入新的缓存
         TABLE_NAME_CACHE.addAll(tableNameList);
-        // 动态更新配置 actualDataNodes
-        actualDataNodesRefresh();
     }
 
     /**
@@ -169,6 +167,9 @@ public class ShardingAlgorithmTool {
             executeSql(Collections.singletonList("CREATE TABLE IF NOT EXISTS `" + resultTableName + "` LIKE `" + logicTableName + "`;"));
             // 缓存重载
             tableNameCacheReload();
+            // 动态更新配置 actualDataNodes
+            ShardingTableNamesConfig shardingTableNamesConfig = SpringUtil.getBean("shardingTableNamesConfig", ShardingTableNamesConfig.class);
+            shardingTableNamesConfig.actualDataNodesRefresh();
         }
         return true;
     }

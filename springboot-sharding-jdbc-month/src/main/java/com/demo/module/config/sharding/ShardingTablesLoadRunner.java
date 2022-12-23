@@ -1,5 +1,6 @@
 package com.demo.module.config.sharding;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -15,9 +16,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class ShardingTablesLoadRunner implements CommandLineRunner {
 
+    @Autowired
+    private ShardingTableNamesConfig shardingTableNamesConfig;
+
     @Override
     public void run(String... args) {
         // 读取已有分表，进行缓存
         ShardingAlgorithmTool.tableNameCacheReload();
+        shardingTableNamesConfig.actualDataNodesRefresh();
     }
 }
