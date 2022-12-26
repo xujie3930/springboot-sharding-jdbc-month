@@ -1,5 +1,6 @@
 package com.demo.module.config.sharding;
 
+import com.demo.module.config.sharding.enums.ShardingTableCacheEnum;
 import com.google.common.collect.Range;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shardingsphere.api.sharding.standard.PreciseShardingAlgorithm;
@@ -17,7 +18,7 @@ import java.util.function.Function;
  * <p> @Title TimeShardingAlgorithm
  * <p> @Description 分片算法，按月分片
  *
- * @author zhj
+ * @author ACGkaka
  * @date 2022/12/20 11:33
  */
 @Slf4j
@@ -34,7 +35,7 @@ public class TimeShardingAlgorithm implements PreciseShardingAlgorithm<Timestamp
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd HH:mm:ss");
 
     /**
-     * 表分片符号，例：t_user_202201 中，分片符号为 "_"
+     * 表分片符号，例：t_contract_202201 中，分片符号为 "_"
      */
     private final String TABLE_SPLIT_SYMBOL = "_";
 
@@ -47,13 +48,20 @@ public class TimeShardingAlgorithm implements PreciseShardingAlgorithm<Timestamp
      */
     @Override
     public String doSharding(Collection<String> tableNames, PreciseShardingValue<Timestamp> preciseShardingValue) {
-        log.info(">>>>>>>>>> 【INFO】精准分片，节点配置表名：{}，数据库实时表名：{}，数据库缓存表名：{}", tableNames,
-                ShardingAlgorithmTool.getAllTableNameBySchema(), ShardingAlgorithmTool.getTableNameCache());
-        LocalDateTime dateTime = preciseShardingValue.getValue().toLocalDateTime();
         String logicTableName = preciseShardingValue.getLogicTableName();
+        ShardingTableCacheEnum logicTable = ShardingTableCacheEnum.of(logicTableName);
+        if (logicTable == null) {
+            log.error(">>>>>>>>>> 【ERROR】数据表类型错误，请稍后重试，logicTableNames：{}，logicTableName:{}",
+                    ShardingTableCacheEnum.logicTableNames(), logicTableName);
+            throw new IllegalArgumentException("数据表类型错误，请稍后重试");
+        }
+
+        log.info(">>>>>>>>>> 【INFO】精确分片，节点配置表名：{}，数据库缓存表名：{}", tableNames, logicTable.resultTableNamesCache());
+
+        LocalDateTime dateTime = preciseShardingValue.getValue().toLocalDateTime();
         String resultTableName = logicTableName + "_" + dateTime.format(TABLE_SHARD_TIME_FORMATTER);
         // 检查分表获取的表名是否存在，不存在则自动建表
-        return ShardingAlgorithmTool.getShardingTableAndCreate(logicTableName, resultTableName);
+        return ShardingAlgorithmTool.getShardingTableAndCreate(logicTable, resultTableName);
     }
 
     /**
@@ -64,8 +72,14 @@ public class TimeShardingAlgorithm implements PreciseShardingAlgorithm<Timestamp
      */
     @Override
     public Collection<String> doSharding(Collection<String> tableNames, RangeShardingValue<Timestamp> rangeShardingValue) {
-        log.info(">>>>>>>>>> 【INFO】范围分片，节点配置表名：{}，数据库实时表名：{}，数据库缓存表名：{}", tableNames,
-                ShardingAlgorithmTool.getAllTableNameBySchema(), ShardingAlgorithmTool.getTableNameCache());
+        String logicTableName = rangeShardingValue.getLogicTableName();
+        ShardingTableCacheEnum logicTable = ShardingTableCacheEnum.of(logicTableName);
+        if (logicTable == null) {
+            log.error(">>>>>>>>>> 【ERROR】逻辑表范围异常，请稍后重试，logicTableNames：{}，logicTableName:{}",
+                    ShardingTableCacheEnum.logicTableNames(), logicTableName);
+            throw new IllegalArgumentException("逻辑表范围异常，请稍后重试");
+        }
+        log.info(">>>>>>>>>> 【INFO】范围分片，节点配置表名：{}，数据库缓存表名：{}", tableNames, logicTable.resultTableNamesCache());
 
         // between and 的起始值
         Range<Timestamp> valueRange = rangeShardingValue.getValueRange();
@@ -73,19 +87,18 @@ public class TimeShardingAlgorithm implements PreciseShardingAlgorithm<Timestamp
         boolean hasUpperBound = valueRange.hasUpperBound();
 
         // 获取最大值和最小值
-        Set<String> tableNameCache = ShardingAlgorithmTool.getTableNameCache();
+        Set<String> tableNameCache = logicTable.resultTableNamesCache();
         LocalDateTime min = hasLowerBound ? valueRange.lowerEndpoint().toLocalDateTime() :getLowerEndpoint(tableNameCache);
         LocalDateTime max = hasUpperBound ? valueRange.upperEndpoint().toLocalDateTime() :getUpperEndpoint(tableNameCache);
 
         // 循环计算分表范围
         Set<String> resultTableNames = new LinkedHashSet<>();
-        String logicTableName = rangeShardingValue.getLogicTableName();
         while (min.isBefore(max) || min.equals(max)) {
             String tableName = logicTableName + TABLE_SPLIT_SYMBOL + min.format(TABLE_SHARD_TIME_FORMATTER);
             resultTableNames.add(tableName);
             min = min.plusMinutes(1);
         }
-        return ShardingAlgorithmTool.getShardingTablesAndCreate(logicTableName, resultTableNames);
+        return ShardingAlgorithmTool.getShardingTablesAndCreate(logicTable, resultTableNames);
     }
 
     // --------------------------------------------------------------------------------------------------------------

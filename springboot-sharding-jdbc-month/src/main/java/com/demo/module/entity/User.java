@@ -23,7 +23,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = false)
 @TableName("t_user")
-public class TUser implements Serializable {
+public class User implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -58,7 +58,7 @@ public class TUser implements Serializable {
      */
     private LocalDateTime updateTime;
 
-    public TUser(String username, String password, Integer age, LocalDateTime createTime, LocalDateTime updateTime) {
+    public User(String username, String password, Integer age, LocalDateTime createTime, LocalDateTime updateTime) {
         this.username = username;
         this.password = password;
         this.age = age;

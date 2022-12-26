@@ -1,6 +1,7 @@
 package com.demo.module.config.sharding;
 
 import com.alibaba.druid.util.StringUtils;
+import com.demo.module.config.sharding.enums.ShardingTableCacheEnum;
 import com.demo.module.utils.SpringUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.shardingsphere.core.rule.DataNode;
@@ -21,19 +22,14 @@ import java.util.stream.Collectors;
  * <p> @Title ShardingAlgorithmTool
  * <p> @Description 按月分片算法工具
  *
- * @author zhj
+ * @author ACGkaka
  * @date 2022/12/20 14:03
  */
 @Slf4j
 public class ShardingAlgorithmTool {
 
-    /** 逻辑表名，例：t_user */
-    public static final String LOGIC_TABLE_NAME = "t_user";
-    /** 表分片符号，例：t_user_202201 中，分片符号为 "_" */
+    /** 表分片符号，例：t_contract_202201 中，分片符号为 "_" */
     private static final String TABLE_SPLIT_SYMBOL = "_";
-
-    /** 已存在表名集合缓存 */
-    private static final Set<String> TABLE_NAME_CACHE = new HashSet<>();
 
     /** 数据库配置 */
     private static final Environment ENV = SpringUtil.getApplicationContext().getEnvironment();
@@ -44,48 +40,59 @@ public class ShardingAlgorithmTool {
 
     /**
      * 检查分表获取的表名是否存在，不存在则自动建表
-     * @param logicTableName 逻辑表名，例：t_user
-     * @param resultTableNames 真实表名，例：t_user_202201
+     * @param logicTable 逻辑表
+     * @param resultTableNames 真实表名，例：t_contract_202201
      * @return 存在于数据库中的真实表名集合
      */
-    public static Set<String> getShardingTablesAndCreate(String logicTableName, Collection<String> resultTableNames) {
-        return resultTableNames.stream().map(o -> getShardingTableAndCreate(logicTableName, o)).collect(Collectors.toSet());
+    public static Set<String> getShardingTablesAndCreate(ShardingTableCacheEnum logicTable, Collection<String> resultTableNames) {
+        return resultTableNames.stream().map(o -> getShardingTableAndCreate(logicTable, o)).collect(Collectors.toSet());
     }
 
     /**
      * 检查分表获取的表名是否存在，不存在则自动建表
-     * @param logicTableName 逻辑表名，例：t_user
-     * @param resultTableName 真实表名，例：t_user_202201
+     * @param logicTable 逻辑表
+     * @param resultTableName 真实表名，例：t_contract_202201
      * @return 确认存在于数据库中的真实表名
      */
-    public static String getShardingTableAndCreate(String logicTableName, String resultTableName) {
+    public static String getShardingTableAndCreate(ShardingTableCacheEnum logicTable, String resultTableName) {
         // 缓存中有此表则返回，没有则判断创建
-        if (TABLE_NAME_CACHE.contains(resultTableName)) {
+        if (logicTable.resultTableNamesCache().contains(resultTableName)) {
             return resultTableName;
         } else {
             // 未创建的表返回逻辑空表
-            boolean isSuccess = createShardingTable(logicTableName, resultTableName);
-            return isSuccess ? resultTableName : logicTableName;
+            boolean isSuccess = createShardingTable(logicTable, resultTableName);
+            return isSuccess ? resultTableName : logicTable.logicTableName();
         }
     }
 
     /**
-     * 缓存重载
+     * 重载全部缓存
      */
-    public static void tableNameCacheReload() {
+    public static void tableNameCacheReloadAll() {
+        Arrays.stream(ShardingTableCacheEnum.values()).forEach(ShardingAlgorithmTool::tableNameCacheReload);
+    }
+
+    /**
+     * 重载指定分表缓存
+     * @param logicTable 逻辑表，例：t_contract
+     */
+    public static void tableNameCacheReload(ShardingTableCacheEnum logicTable) {
         // 读取数据库中|所有表名
-        List<String> tableNameList = getAllTableNameBySchema();
+        List<String> tableNameList = getAllTableNameBySchema(logicTable);
         // 删除旧的缓存（如果存在）
-        TABLE_NAME_CACHE.clear();
+        logicTable.resultTableNamesCache().clear();
         // 写入新的缓存
-        TABLE_NAME_CACHE.addAll(tableNameList);
+        logicTable.resultTableNamesCache().addAll(tableNameList);
+        // 动态更新配置 actualDataNodes
+        actualDataNodesRefresh(logicTable);
     }
 
     /**
      * 获取所有表名
      * @return 表名集合
+     * @param logicTable 逻辑表
      */
-    public static List<String> getAllTableNameBySchema() {
+    public static List<String> getAllTableNameBySchema(ShardingTableCacheEnum logicTable) {
         List<String> tableNames = new ArrayList<>();
         if (StringUtils.isEmpty(DATASOURCE_URL) || StringUtils.isEmpty(DATASOURCE_USERNAME) || StringUtils.isEmpty(DATASOURCE_PASSWORD)) {
             log.error(">>>>>>>>>> 【ERROR】数据库连接配置有误，请稍后重试，URL:{}, username:{}, password:{}", DATASOURCE_URL, DATASOURCE_USERNAME, DATASOURCE_PASSWORD);
@@ -93,9 +100,14 @@ public class ShardingAlgorithmTool {
         }
         try (Connection conn = DriverManager.getConnection(DATASOURCE_URL, DATASOURCE_USERNAME, DATASOURCE_PASSWORD);
              Statement st = conn.createStatement()) {
-            try (ResultSet rs = st.executeQuery("show TABLES like '" + LOGIC_TABLE_NAME + TABLE_SPLIT_SYMBOL + "%'")) {
+            String logicTableName = logicTable.logicTableName();
+            try (ResultSet rs = st.executeQuery("show TABLES like '" + logicTableName + TABLE_SPLIT_SYMBOL + "%'")) {
                 while (rs.next()) {
-                    tableNames.add(rs.getString(1));
+                    String tableName = rs.getString(1);
+                    // 匹配分表格式 例：^(t\_contract_\d{6})$
+                    if (tableName != null && tableName.matches(String.format("^(%s\\d{6})$", logicTableName + TABLE_SPLIT_SYMBOL))) {
+                        tableNames.add(rs.getString(1));
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -106,25 +118,20 @@ public class ShardingAlgorithmTool {
     }
 
     /**
-     * 获取表名缓存
-     * @return 表名缓存
-     */
-    public static Set<String> getTableNameCache() {
-        return TABLE_NAME_CACHE;
-    }
-
-    /**
      *  动态更新配置 actualDataNodes
+     * @param logicTable
      */
-    public static void actualDataNodesRefresh()  {
+    public static void actualDataNodesRefresh(ShardingTableCacheEnum logicTable)  {
         try {
             // 获取数据分片节点
-            Set<String> tableNameCache = ShardingAlgorithmTool.getTableNameCache();
+            String logicTableName = logicTable.logicTableName();
+            Set<String> tableNamesCache = logicTable.resultTableNamesCache();
+            log.info(">>>>>>>>>> 【INFO】更新分表配置，logicTableName:{}，tableNamesCache:{}", logicTableName, tableNamesCache);
             ShardingDataSource dataSource = (ShardingDataSource) SpringUtil.getBean("dataSource", DataSource.class);
-            TableRule tableRule = dataSource.getShardingContext().getShardingRule().getTableRule(LOGIC_TABLE_NAME);
+            TableRule tableRule = dataSource.getShardingContext().getShardingRule().getTableRule(logicTableName);
             List<DataNode> dataNodes = tableRule.getActualDataNodes();
             String dataSourceName = dataNodes.get(0).getDataSourceName();
-            List<DataNode> newDataNodes = tableNameCache.stream().map(tableName -> new DataNode(dataSourceName + "." + tableName)).collect(Collectors.toList());
+            List<DataNode> newDataNodes = tableNamesCache.stream().map(tableName -> new DataNode(dataSourceName + "." + tableName)).collect(Collectors.toList());
 
             // 更新actualDataNodes
             Field actualDataNodesField = TableRule.class.getDeclaredField("actualDataNodes");
@@ -146,30 +153,27 @@ public class ShardingAlgorithmTool {
 
     /**
      * 创建分表
-     * @param logicTableName 逻辑表名，例：t_user
-     * @param resultTableName 真实表名，例：t_user_202201
+     * @param logicTable 逻辑表
+     * @param resultTableName 真实表名，例：t_contract_202201
      * @return 创建结果（true创建成功，false未创建）
      */
-    private static boolean createShardingTable(String logicTableName, String resultTableName) {
+    private static boolean createShardingTable(ShardingTableCacheEnum logicTable, String resultTableName) {
         // 根据日期判断，当前月份之后分表不提前创建
-        String month = resultTableName.replace(logicTableName + TABLE_SPLIT_SYMBOL,"");
+        String month = resultTableName.replace(logicTable.logicTableName() + TABLE_SPLIT_SYMBOL,"");
         YearMonth shardingMonth = YearMonth.parse(month, DateTimeFormatter.ofPattern("yyyyMM"));
         if (shardingMonth.isAfter(YearMonth.now())) {
             return false;
         }
 
-        synchronized (logicTableName.intern()) {
+        synchronized (logicTable.logicTableName().intern()) {
             // 缓存中有此表 返回
-            if (TABLE_NAME_CACHE.contains(resultTableName)) {
+            if (logicTable.resultTableNamesCache().contains(resultTableName)) {
                 return false;
             }
             // 缓存中无此表，则建表并添加缓存
-            executeSql(Collections.singletonList("CREATE TABLE IF NOT EXISTS `" + resultTableName + "` LIKE `" + logicTableName + "`;"));
+            executeSql(Collections.singletonList("CREATE TABLE IF NOT EXISTS `" + resultTableName + "` LIKE `" + logicTable.logicTableName() + "`;"));
             // 缓存重载
-            tableNameCacheReload();
-            // 动态更新配置 actualDataNodes
-            ShardingTableNamesConfig shardingTableNamesConfig = SpringUtil.getBean("shardingTableNamesConfig", ShardingTableNamesConfig.class);
-            shardingTableNamesConfig.actualDataNodesRefresh();
+            tableNameCacheReload(logicTable);
         }
         return true;
     }

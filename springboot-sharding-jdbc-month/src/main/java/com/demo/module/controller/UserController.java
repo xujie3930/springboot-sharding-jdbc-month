@@ -1,8 +1,8 @@
 package com.demo.module.controller;
 
 
-import com.demo.module.entity.TUser;
-import com.demo.module.service.TUserService;
+import com.demo.module.entity.User;
+import com.demo.module.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,13 +21,13 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/user")
-public class TUserController {
+public class UserController {
 
     @Autowired
-    private TUserService tUserService;
+    private UserService userService;
 
     @GetMapping("/list")
-    public List<TUser> list() {
-        return tUserService.list();
+    public List<User> list() {
+        return userService.list();
     }
 }
