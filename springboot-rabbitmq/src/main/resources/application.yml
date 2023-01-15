@@ -1,0 +1,32 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: springboot-rabbitmq
+  rabbitmq:
+    host: 127.0.0.1
+    port: 5672
+    username: guest
+    password: guest
+    # 虚拟host 可以不设置，使用server默认host
+    virtual-host: /
+    # 是否开启发送端消息抵达队列的确认
+    publisher-returns: true
+    # 发送方确认机制，默认为NONE，即不进行确认；SIMPLE：同步等待消息确认；CORRELATED：异步确认
+    publisher-confirm-type: correlated
+    # 消费者监听相关配置
+    listener:
+      simple:
+        acknowledge-mode: auto # 确认模式，默认auto，自动确认；manual：手动确认
+        prefetch: 1 # 限制每次发送一条数据
+        concurrency: 3 # 同一个队列启动几个消费者
+        max-concurrency: 3 # 启动消费者最大数量
+        # 重试机制
+        retry:
+          # 开启消费者(程序出现异常)重试机制，默认开启并一直重试
+          enabled: true
+          # 最大重试次数
+          max-attempts: 3
+          # 重试间隔时间(毫秒)
+          initial-interval: 3000
