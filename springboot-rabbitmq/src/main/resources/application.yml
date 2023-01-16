@@ -5,8 +5,8 @@ spring:
   application:
     name: springboot-rabbitmq
   rabbitmq:
-    host: 127.0.0.1
-    port: 5672
+    # 此处不建议单独配置host和port，单独配置不支持连接RabbitMQ集群
+    addresses: 127.0.0.1:5672
     username: guest
     password: guest
     # 虚拟host 可以不设置，使用server默认host
