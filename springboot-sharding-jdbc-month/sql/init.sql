@@ -23,25 +23,3 @@ CREATE TABLE `t_user_202201` (
   `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='用户表202201';
-
--- ------------------------------
--- 日志表
--- ------------------------------
-CREATE TABLE `t_log` (
-  `id` bigint(16) NOT NULL COMMENT '主键',
-  `log` varchar(255) NOT NULL COMMENT '日志',
-  `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='日志表';
-
--- ------------------------------
--- 日志表202201
--- ------------------------------
-CREATE TABLE `t_log_202201` (
-  `id` bigint(16) NOT NULL COMMENT '主键',
-  `log` varchar(255) NOT NULL COMMENT '日志',
-  `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='日志表202201';
