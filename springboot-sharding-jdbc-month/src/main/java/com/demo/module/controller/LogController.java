@@ -1,7 +1,9 @@
 package com.demo.module.controller;
 
 
+import com.demo.module.entity.Log;
 import com.demo.module.entity.User;
+import com.demo.module.service.LogService;
 import com.demo.module.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,10 +25,10 @@ import java.util.List;
 public class LogController {
 
     @Autowired
-    private UserService userService;
+    private LogService logService;
 
     @GetMapping("/list")
-    public List<User> list() {
-        return userService.list();
+    public List<Log> list() {
+        return logService.list();
     }
 }
