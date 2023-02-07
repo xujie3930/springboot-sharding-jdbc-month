@@ -54,20 +54,6 @@ spring:
                 shardingColumn: create_time
                 # 分片算法名称，不支持大写字母和下划线，否则启动就会报错
                 shardingAlgorithmName: time-sharding-altorithm
-          # t_log 是逻辑表
-          t_log:
-            # 配置数据节点，这里是按月分表
-            # 示例1：时间范围设置在202201 ~ 210012
-            # actualDataNodes: mydb.t_user_$->{2022..2100}0$->{1..9},mydb.t_user_$->{2022..2100}1$->{0..2}
-            # 示例2：时间范围设置在202201 ~ 202203
-            actualDataNodes: mydb.t_log
-            tableStrategy:
-              # 使用标准分片策略
-              standard:
-                # 配置分片字段
-                shardingColumn: create_time
-                # 分片算法名称，不支持大写字母和下划线，否则启动就会报错
-                shardingAlgorithmName: time-sharding-altorithm
         # 分片算法配置
         shardingAlgorithms:
           # 分片算法名称，不支持大写字母和下划线，否则启动就会报错

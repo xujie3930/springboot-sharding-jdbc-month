@@ -14,11 +14,7 @@ public enum ShardingTableCacheEnum {
     /**
      * 用户表
      */
-    USER("t_user", new HashSet<>()),
-    /**
-     * 日志表
-     */
-    LOG("t_log", new HashSet<>());
+    USER("t_user", new HashSet<>());
 
     /**
      * 逻辑表名
