@@ -119,7 +119,7 @@ spring:
 mybatis-plus:
   mapper-locations: classpath*:/mapper/*Mapper.xml
   # 实体扫描，多个package用逗号或者分号分隔
-  typeAliasesPackage: cn.agile.stats.*.entity
+  typeAliasesPackage: com.demo.*.entity
   # 测试环境打印sql
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
