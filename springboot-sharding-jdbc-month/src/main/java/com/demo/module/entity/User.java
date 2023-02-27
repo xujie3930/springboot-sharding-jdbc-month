@@ -60,7 +60,7 @@ public class User implements Serializable {
     /**
      * 更新时间
      */
-    @TableField("updateTime")
+    @TableField("update_time")
     private LocalDateTime updateTime;
 
     public User(String username, String password, Integer age, LocalDateTime createTime, LocalDateTime updateTime) {
